@@ -3,54 +3,84 @@
 
   <!-- Input Row -->
   <div class="input-row">
-    <input type="text" class="task-input" placeholder="Add a new task..." />
-    <button class="add-btn">Add</button>
+    <input
+      type="text"
+      class="task-input"
+      placeholder="Add a new task"
+      [formControl]="taskInput"
+      aria-label="New task name"
+    />
+    <button class="add-btn" (click)="addTask()">Add</button>
+  </div>
+  <div class="input-row">
+    @if (taskInput.invalid && (taskInput.dirty || taskInput.touched)) {
+      <div class="alert">
+        @if (taskInput.hasError('required')) {
+          <div>Task is required.</div>
+        }
+        @if (taskInput.hasError('minlength')) {
+          <div>Task must be at least 4 characters long.</div>
+        }
+      </div>
+    }
   </div>
 
   <!-- Date Picker -->
-  <div class="date-row">
-    <input type="date" id="taskDate" class="date-input" />
-  </div>
+  @if (taskList().length > 0) {
+    <div class="date-row">
+      <input
+        type="date"
+        [formControl]="taskDate"
+        class="date-input"
+        aria-label="Filter by date"
+        (change)="filterTasks($event)"
+      />
+    </div>
+  }
 
   <!-- Task List -->
   <ul class="task-list">
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t1" />
-      <label for="t1" class="task-label">Design the homepage wireframe</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-
-    <li class="task-item completed">
-      <input type="checkbox" class="task-check" id="t2" checked />
-      <label for="t2" class="task-label">Set up Angular project</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t3" />
-      <label for="t3" class="task-label">Write unit tests for components</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t4" />
-      <label for="t4" class="task-label">Review pull requests</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t4" />
-      <label for="t4" class="task-label">Review pull requests</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t4" />
-      <label for="t4" class="task-label">Review pull requests</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
-    <li class="task-item">
-      <input type="checkbox" class="task-check" id="t4" />
-      <label for="t4" class="task-label">Review pull requests</label>
-      <button class="cancel-btn" aria-label="Remove task">Remove</button>
-    </li>
+    @for (item of filteredTaskList(); track item.id) {
+      <li class="task-item" [class]="{ completed: item.isCompleted }">
+        <input
+          type="checkbox"
+          class="task-check"
+          [id]="item.id"
+          [checked]="item.isCompleted"
+          [disabled]="item.isCompleted"
+        />
+        <span class="task-label">{{ item.name }}</span>
+        <span class="task-label">
+          {{ item.updatedDate | date: 'MM/dd/yyyy' }}
+        </span>
+        @if (!item.isCompleted) {
+          <button class="cancel-btn" aria-label="Remove task" (click)="showDialog = true">
+            Remove
+          </button>
+        }
+      </li>
+    }
   </ul>
 </div>
+@if (showDialog) {
+  <!-- Backdrop -->
+  <div class="modal-overlay"></div>
+
+  <!-- Dialog -->
+  <div
+    class="modal-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+    aria-describedby="modal-desc"
+  >
+    <h2 id="modal-title" class="modal-title">Remove Task</h2>
+    <p id="modal-desc" class="modal-message">
+      Remove "Design the homepage wireframe" from your list?
+    </p>
+    <div class="modal-actions">
+      <button class="modal-btn-cancel">Cancel</button>
+      <button class="modal-btn-confirm danger">Remove</button>
+    </div>
+  </div>
+}

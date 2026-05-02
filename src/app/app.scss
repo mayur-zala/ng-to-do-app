@@ -68,6 +68,11 @@
   }
 }
 
+.alert {
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
 // ── Date Row ───────────────────────────────────────────────
 .date-row {
   display: flex;
@@ -106,8 +111,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: 237px;
-  overflow: scroll;
+  max-height: 237px;
+  overflow: auto;
 }
 
 .task-item {
