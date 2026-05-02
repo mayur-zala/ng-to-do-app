@@ -1,7 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { sampleTasks, ToDoItem } from './model/toDoItem';
 import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { map, startWith } from 'rxjs';
+import { ToDoItem } from './model/toDoItem';
+import { ToDoService } from './services/to-do-service';
 import { Dialog } from './shared/dialog/dialog';
 
 @Component({
@@ -12,13 +15,26 @@ import { Dialog } from './shared/dialog/dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
+  private todoService = inject(ToDoService);
+
   taskInput = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(4)],
   });
   taskDate = new FormControl('', { nonNullable: true });
 
-  taskList = signal<ToDoItem[]>(sampleTasks);
+  private tasks$ = this.todoService.getTasks();
+
+  taskList = toSignal(this.tasks$, { initialValue: [] as ToDoItem[] });
+  isLoading = toSignal(
+    this.tasks$.pipe(
+      map(() => false),
+      startWith(true),
+    ),
+    { initialValue: true },
+  );
+  errorMessage = toSignal(this.todoService.error$, { initialValue: null });
+
   filterDate = signal<string>('');
   filteredTaskList = computed(() => {
     const date = this.filterDate();
@@ -31,18 +47,14 @@ export class App {
   taskToChange = signal<ToDoItem | null>(null);
   dialogAction = signal<'remove' | 'complete'>('remove');
 
-  addTask(): void {
+  async addTask(): Promise<void> {
     if (this.taskInput.invalid) return;
-
-    const newTask: ToDoItem = {
-      id: crypto.randomUUID(),
-      name: this.taskInput.value,
-      isCompleted: false,
-      createdDate: new Date(),
-      updatedDate: new Date(),
-    };
-    this.taskList.update((list) => [...list, newTask]);
-    this.taskInput.reset();
+    try {
+      await this.todoService.addTask(this.taskInput.value);
+      this.taskInput.reset();
+    } catch {
+      // error$ stream handles display
+    }
   }
 
   filterTasks(event: Event): void {
@@ -57,19 +69,15 @@ export class App {
     this.showDialog.set(true);
   }
 
-  removeTask(): void {
-    this.taskList.update((list) => list.filter((t) => t.id !== this.taskToChange()?.id));
+  async removeTask(): Promise<void> {
+    const id = this.taskToChange()?.id;
+    if (id) await this.todoService.removeTask(id);
     this.showDialog.set(false);
   }
 
-  completeTask(): void {
-    this.taskList.update((list) =>
-      list.map((task) =>
-        task.id === this.taskToChange()?.id
-          ? { ...task, isCompleted: true, updatedDate: new Date() }
-          : task,
-      ),
-    );
+  async completeTask(): Promise<void> {
+    const id = this.taskToChange()?.id;
+    if (id) await this.todoService.completeTask(id);
     this.showDialog.set(false);
   }
 }
