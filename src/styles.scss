@@ -15,6 +15,16 @@ body {
   align-items: center;
 }
 
+main {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 780px;
+  height: fit-content;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

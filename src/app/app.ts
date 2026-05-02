@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ToDoItem } from './model/toDoItem';
+import { sampleTasks, ToDoItem } from './model/toDoItem';
 import { DatePipe } from '@angular/common';
+import { Dialog } from './shared/dialog/dialog';
 
 @Component({
   selector: 'app-root',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, Dialog],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,7 +18,7 @@ export class App {
   });
   taskDate = new FormControl('', { nonNullable: true });
 
-  taskList = signal<ToDoItem[]>([]);
+  taskList = signal<ToDoItem[]>(sampleTasks);
   filterDate = signal<string>('');
   filteredTaskList = computed(() => {
     const date = this.filterDate();
@@ -26,7 +27,9 @@ export class App {
       (task) => task.createdDate.toDateString() === new Date(date).toDateString(),
     );
   });
-  showDialog = false;
+  showDialog = signal<boolean>(false);
+  taskToChange = signal<ToDoItem | null>(null);
+  dialogAction = signal<'remove' | 'complete'>('remove');
 
   addTask(): void {
     if (this.taskInput.invalid) return;
@@ -46,5 +49,27 @@ export class App {
     const input = event.target as HTMLInputElement;
     this.filterDate.set(input.value);
     input.blur();
+  }
+
+  openTaskDialog(task: ToDoItem, action: 'remove' | 'complete') {
+    this.taskToChange.set(task);
+    this.dialogAction.set(action);
+    this.showDialog.set(true);
+  }
+
+  removeTask(): void {
+    this.taskList.update((list) => list.filter((t) => t.id !== this.taskToChange()?.id));
+    this.showDialog.set(false);
+  }
+
+  completeTask(): void {
+    this.taskList.update((list) =>
+      list.map((task) =>
+        task.id === this.taskToChange()?.id
+          ? { ...task, isCompleted: true, updatedDate: new Date() }
+          : task,
+      ),
+    );
+    this.showDialog.set(false);
   }
 }
