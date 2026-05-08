@@ -38,12 +38,8 @@
 }
 
 <!-- Task List -->
-@if (isLoading()) {
-  <p>Loading tasks...</p>
-} @else if (errorMessage()) {
-  <p class="error">{{ errorMessage() }}</p>
-} @else if (filteredTaskList().length === 0) {
-  <p>No tasks found.</p>
+@if (filteredTaskList().length === 0 && filterDate()) {
+  <p class="empty-state">No tasks for this date.</p>
 } @else {
   <ul class="task-list">
     @for (item of filteredTaskList(); track item.id) {

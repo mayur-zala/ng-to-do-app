@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { map, startWith } from 'rxjs';
-import { ToDoItem } from './model/toDoItem';
+import { sampleTasks, ToDoItem } from './model/toDoItem';
 import { ToDoService } from './services/to-do-service';
 import { Dialog } from './shared/dialog/dialog';
 
@@ -16,24 +16,12 @@ import { Dialog } from './shared/dialog/dialog';
 })
 export class App {
   private todoService = inject(ToDoService);
-
   taskInput = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(4)],
   });
   taskDate = new FormControl('', { nonNullable: true });
-
-  private tasks$ = this.todoService.getTasks();
-
-  taskList = toSignal(this.tasks$, { initialValue: [] as ToDoItem[] });
-  isLoading = toSignal(
-    this.tasks$.pipe(
-      map(() => false),
-      startWith(true),
-    ),
-    { initialValue: true },
-  );
-  errorMessage = toSignal(this.todoService.error$, { initialValue: null });
+  taskList = signal<ToDoItem[]>(sampleTasks);
 
   filterDate = signal<string>('');
   filteredTaskList = computed(() => {
@@ -47,10 +35,21 @@ export class App {
   taskToChange = signal<ToDoItem | null>(null);
   dialogAction = signal<'remove' | 'complete'>('remove');
 
-  async addTask(): Promise<void> {
+  addTask(): void {
     if (this.taskInput.invalid) return;
     try {
-      await this.todoService.addTask(this.taskInput.value);
+      this.taskList.update((list) => {
+        return [
+          {
+            id: crypto.randomUUID(),
+            name: this.taskInput.value,
+            isCompleted: false,
+            createdDate: new Date(),
+            updatedDate: new Date(),
+          },
+          ...list,
+        ];
+      });
       this.taskInput.reset();
     } catch {
       // error$ stream handles display
@@ -69,15 +68,19 @@ export class App {
     this.showDialog.set(true);
   }
 
-  async removeTask(): Promise<void> {
-    const id = this.taskToChange()?.id;
-    if (id) await this.todoService.removeTask(id);
+  removeTask(): void {
+    this.taskList.update((list) => list.filter((t) => t.id !== this.taskToChange()?.id));
     this.showDialog.set(false);
   }
 
-  async completeTask(): Promise<void> {
-    const id = this.taskToChange()?.id;
-    if (id) await this.todoService.completeTask(id);
+  completeTask(): void {
+    this.taskList.update((list) =>
+      list.map((task) =>
+        task.id === this.taskToChange()?.id
+          ? { ...task, isCompleted: true, updatedDate: new Date() }
+          : task,
+      ),
+    );
     this.showDialog.set(false);
   }
 }
